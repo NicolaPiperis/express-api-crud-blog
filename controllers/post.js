@@ -1,5 +1,7 @@
 const posts = require("../db/post.json");
 const path = require('path');
+const kebabCase = require('lodash/kebabCase');
+const fs = require("fs");
 
 
 function index(req, res) {
@@ -31,7 +33,7 @@ function index(req, res) {
             });
         }
     });
-}
+};
 
 function create(req, res) {
     // Se desideri gestire il formato di risposta in base all'header "Accept", puoi riutilizzare il codice commentato qui sotto
@@ -44,7 +46,33 @@ function create(req, res) {
 
     // Altrimenti, se vuoi solo restituire un messaggio
     // res.send("create andato a buon fine");
-}
+};
+
+function store(req, res) {
+
+    newPost = {
+        ...req.body,
+        slug: kebabCase(req.body.title),
+        // image: req.file,
+    } ;
+
+    posts.push(newPost);
+
+    const json = JSON.stringify(posts, null, 2);
+    fs.writeFileSync(path.resolve(__dirname, "..", "db", "post.json"), json);
+
+    res.format({
+        html: () => {
+            res.redirect("/");
+        },
+        json: () => {
+            res.json(newPost);
+        },
+        default: () => {
+            res.status(406).send('Formato non accettato');
+        }
+    })
+};
 
 function show(req, res) {
     
@@ -58,7 +86,7 @@ function show(req, res) {
     } else {
         res.status(404).send('Post non trovato');
     }
-}
+};
 
 function download(req, res) {
     const slug = req.params.slug;
@@ -76,11 +104,28 @@ function download(req, res) {
         // Se il post non è stato trovato, ritorna un errore 404
         res.status(404).send('Post non trovato');
     }
+};
+
+function destroy(req, res) {
+    const slug = req.params.slug;
+    // Trova l'indice del post da eliminare
+    const postIndex = posts.findIndex((_p) => _p.slug === slug);
+
+    if (postIndex !== -1) {
+        // Rimuovi il post dall'array
+        posts.splice(postIndex, 1);
+        res.send('Post eliminato');
+    } else {
+        res.status(404).send('Post non trovato');
+    }   
 }
+
 
 module.exports = {
     index,
     show,
     create,
-    download
+    download,
+    store, 
+    destroy
 };
